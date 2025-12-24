@@ -18,7 +18,7 @@ void otobusleriayikla(FILE *, FILE *, FILE *);
 void filesonlanis(FILE *, FILE *, FILE *);
 
 /* --- OTOBÜS STRUCT'u ---*/
-typedef struct {
+typedef struct {  //otobus turunde kolay tanımlamak için typedef kullandık.
     char plaka[8];
     int koltuksayisi;
     int yolcusayisi;
@@ -30,6 +30,7 @@ int rastgelemi = -1;
 
 /* === PROGRAMIN BAŞLANGIÇ NOKTASI === */
 int main(void) {
+    srand(time(NULL)); //her açılıştı farklı rastgele sayılar vermesi için.
     filebaslangic(); // Dosyaları aç ve program akışını başlatır.
     return 0;
 }
@@ -39,7 +40,7 @@ void filebaslangic() {
     FILE *srvsler = fopen("servisler.txt", "w+");
     FILE *iptaller = fopen("iptaller.txt", "w");
     FILE *devam = fopen("devam.txt", "w");
-    /* Dosyalardan herhangi biri herhangi bir şekilde mevcut değilse programı sonlandırır. */
+    /* Dosyalardan herhangi biri herhangi bir şekilde mevcut değilse progarmı sonlandırır. */
     if (srvsler == NULL || iptaller == NULL || devam == NULL) {
         printf("gerekli belgeler bulunamadi Lutfen kontrol edip tekrar deneyin");
         exit(1);
@@ -58,7 +59,7 @@ void tumfonksiyonlar(FILE *srvsler, FILE *iptaller, FILE *devam) {
 
 void manuelgirme() {
     printf("    OTOBUS SAYISINI GIRIN\n\n    ");
-    scanf("%d", &otobussayisi); // Degiskene deger verir
+    scanf("%d", &otobussayisi);
     int yanlisgirildi = 0;
     char cevap[9];
     printf("Otobus bilgilerini kendin mi girmek istersin yoksa rastgele mi olussun?\n\n  KENDIM/RASTGELE\n\n      ");
@@ -68,7 +69,7 @@ void manuelgirme() {
             printf("Gecersiz kelime girdiniz");
         }
         scanf("%8s", cevap);
-        /* C buyuk ve kucuk harf hassasiyeti olan bir dil olduğundan iki türlü de kontrol eder. strcp() içindeki iki string de eşitse 0 döndürür */
+        /* C buyuk ve kucuk harf hassasiyeti olan bir dil olduğundan iki türlü de kontrol eder. strcmp() içindeki iki string de eşitse 0 döndürür */
         if (strcmp(cevap, "KENDIM") == 0 || strcmp(cevap, "kendim") == 0) {
             rastgelemi = 0;
         } else if (strcmp(cevap, "RASTGELE") == 0 || strcmp(cevap, "rastgele") == 0) {
@@ -78,63 +79,65 @@ void manuelgirme() {
     } while (rastgelemi == -1);
 }
 
-/* === OTOBÜS BİLGİLERİNİ YAZMA ===
+/* ---- OTOBÜS BİLGİLERİNİ YAZMA ----
    Otobüsleri manuel veya rastgele oluşturur ve dosyaya yazar */
 void tumotobusleriyazdir(FILE *srvsler) {
-    srand(time(NULL)); //her açılıştı farklı rastgele sayılar vermesi için.
     /* Otobüsler için dinamik bellek ayrılır */
-    otobus *girilenveriler = malloc(otobussayisi * sizeof *girilenveriler);
+    otobus *girilenveriler = malloc(sizeof(otobus)*otobussayisi);
     if (girilenveriler == NULL) {
         //Null check
         printf("Ram ayrilamadi");
         exit(1);
     }
     int sondorthane = 0;
-    int rezervplaka = -1;
+    int rezervplaka[otobussayisi];
     int hataligirildi = 0;
     /* Dosya başlığı yazılır */
-    fprintf(srvsler,
-            "     OTOBUS SAYISI: %d\n\n Otobus Plakasi  Koltuk Sayisi    Yolcu Sayisi\n", otobussayisi
-    );
+    fprintf(srvsler,"     OTOBUS SAYISI: %d\n\n Otobus Plakasi  Koltuk Sayisi    Yolcu Sayisi\n", otobussayisi);
     for (int i = 0; i < otobussayisi; i++) {
         if (rastgelemi) {
             /* Rastgele değer atar */
-            sondorthane = rand() % 10000;
-            while (sondorthane == rezervplaka) {
+            int tekraret=0;
+            do {
                 sondorthane = rand() % 10000;
-            }
-            rezervplaka = sondorthane;
-            girilenveriler[i].koltuksayisi =
-                    rand() % (DELTA + 1) + MIN_KOLTUKSAYISI;
-            girilenveriler[i].yolcusayisi =
-                    rand() % girilenveriler[i].koltuksayisi + 1;
+                for (int j = 0; j <i; j++) {
+                    if (rezervplaka[j] == sondorthane) {
+                        tekraret=1;
+                    }
+                }
+            }while (tekraret);
+            rezervplaka[i] = sondorthane;
+            girilenveriler[i].koltuksayisi =rand() % (DELTA + 1) + MIN_KOLTUKSAYISI;
+            girilenveriler[i].yolcusayisi =rand() % girilenveriler[i].koltuksayisi + 1;
         } else {
             /* Manuel veri girişi */
             printf("    -----------%d. OTOBUS----------\n   Plakanin son dort hanesini girin.\n    ", (i + 1));
-            scanf("%d", &sondorthane);
-
+            do {
+                if (hataligirildi)
+                {
+                    printf("     Lutfen dort basamakli pozitif bir sayi girin!\n");
+                }
+                scanf("%d", &sondorthane);
+                hataligirildi=1;
+            }while (sondorthane<0||sondorthane>9999); //dört basamaklıdan daha çok basamaklı bir sayı girilirse döngüye alır doğru sayı girilene kadar
+            hataligirildi = 0;
             do {
                 if (hataligirildi) {
                     printf("   Yolcu sayisi koltuk sayisinden buyuk olamaz\n");
                     /* Yolcu sayisinin koltuk sayisinden buyuk olamayığının kontrolu*/
                 }
-
                 printf("   Otobusteki koltuk sayisini girin.\n    ");
                 scanf("%d", &girilenveriler[i].koltuksayisi);
-
                 printf("    Otobusteki yolcu sayisini girin.\n     ");
                 scanf("%d", &girilenveriler[i].yolcusayisi);
-
                 hataligirildi = 1;
-            } while (girilenveriler[i].koltuksayisi <
-                     girilenveriler[i].yolcusayisi);
+            } while (girilenveriler[i].koltuksayisi <girilenveriler[i].yolcusayisi);
 
             hataligirildi = 0;
         }
         /* Plaka oluşturur ve metin belgesine yazar */
-        snprintf(girilenveriler[i].plaka, 11, "06J%04d", sondorthane);
-        fprintf(srvsler, " %-*s%*d%*d\n", 0, girilenveriler[i].plaka, 16, girilenveriler[i].koltuksayisi, 16,
-                girilenveriler[i].yolcusayisi);
+        snprintf(girilenveriler[i].plaka, sizeof(girilenveriler[i].plaka), "06J%04d", sondorthane);  //başına yeteri kadar sıfır koyması için plakanın son dört hanesini %04d alıyor.
+        fprintf(srvsler, " %-*s%*d%*d\n", 0, girilenveriler[i].plaka, 16, girilenveriler[i].koltuksayisi, 16,girilenveriler[i].yolcusayisi);
     }
     /* Dosya okunmaya hazır hale getirilir */
     rewind(srvsler);
@@ -145,7 +148,6 @@ void tumotobusleriyazdir(FILE *srvsler) {
 /* --- DOSYADA BAŞLIK ATLAMA ---*/
 void altsatiragec(FILE *srvsler) {
     char altsatirdizisi[100];
-
     /* İlk 3 satır başlık olduğu için geçilir */
     for (int i = 0; i < 3; i++) {
         fgets(altsatirdizisi, sizeof(altsatirdizisi), srvsler);
@@ -154,7 +156,7 @@ void altsatiragec(FILE *srvsler) {
 /* --- OTOBÜSLERİ AYIKLAMA ---
    Doluluk oranına göre iptal ya da devam ayrımı yapar */
 void otobusleriayikla(FILE *srvsler, FILE *iptaller, FILE *devam) {
-    otobus *alinanveriler = malloc(otobussayisi * sizeof *alinanveriler);
+    otobus *alinanveriler = malloc(sizeof(otobus)*otobussayisi);
     if (alinanveriler == NULL) {
         printf("Ram ayrilamadi");
         exit(1);
@@ -172,22 +174,18 @@ void otobusleriayikla(FILE *srvsler, FILE *iptaller, FILE *devam) {
         dolulukorani = (float) alinanveriler[j].yolcusayisi / (float) alinanveriler[j].koltuksayisi;
         if (dolulukorani < 0.5) {
             iptaledilensayisi++;
-            fprintf(iptaller, "   %s       %.2f \n",
-            alinanveriler[j].plaka, dolulukorani);
+            fprintf(iptaller, "   %s       %.2f \n",alinanveriler[j].plaka, dolulukorani);
         } else {
-            fprintf(devam, "   %s       %.2f \n",
-            alinanveriler[j].plaka, dolulukorani);
+            fprintf(devam, "   %s       %.2f \n",alinanveriler[j].plaka, dolulukorani);
         }
         j++;
     }
-    fprintf(iptaller,"\n    Iptal edilen otobus sayisi: %d",
-    iptaledilensayisi);
-    fprintf(devam,"\n    Devam edilen otobus sayisi: %d",
-    otobussayisi - iptaledilensayisi);
+    fprintf(iptaller,"\n    Iptal edilen otobus sayisi: %d",iptaledilensayisi);
+    fprintf(devam,"\n    Devam edilen otobus sayisi: %d",otobussayisi - iptaledilensayisi);
     /* Bellek serbest bırakılır */
     free(alinanveriler);
 }
-/* === DOSYA KAPANIŞI === */
+/* --- DOSYA KAPANIŞI --- */
 void filesonlanis(FILE *srvsler, FILE *iptaller, FILE *devam) {
     fclose(iptaller);
     fclose(devam);
